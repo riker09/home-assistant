@@ -74,19 +74,10 @@ async def test_auth_middleware_loaded_by_default(hass):
     assert len(mock_setup.mock_calls) == 1
 
 
-async def test_access_without_password(app, aiohttp_client):
-    """Test access without password."""
-    setup_auth(app, [], False, api_password=None)
-    client = await aiohttp_client(app)
-
-    resp = await client.get('/')
-    assert resp.status == 200
-
-
 async def test_access_with_password_in_header(app, aiohttp_client,
                                               legacy_auth):
     """Test access with password in header."""
-    setup_auth(app, [], False, api_password=API_PASSWORD)
+    setup_auth(app, [], api_password=API_PASSWORD)
     client = await aiohttp_client(app)
 
     req = await client.get(
@@ -100,7 +91,7 @@ async def test_access_with_password_in_header(app, aiohttp_client,
 
 async def test_access_with_password_in_query(app, aiohttp_client, legacy_auth):
     """Test access with password in URL."""
-    setup_auth(app, [], False, api_password=API_PASSWORD)
+    setup_auth(app, [], api_password=API_PASSWORD)
     client = await aiohttp_client(app)
 
     resp = await client.get('/', params={
@@ -119,7 +110,7 @@ async def test_access_with_password_in_query(app, aiohttp_client, legacy_auth):
 
 async def test_basic_auth_works(app, aiohttp_client):
     """Test access with basic authentication."""
-    setup_auth(app, [], False, api_password=API_PASSWORD)
+    setup_auth(app, [], api_password=API_PASSWORD)
     client = await aiohttp_client(app)
 
     req = await client.get(
@@ -147,7 +138,7 @@ async def test_basic_auth_works(app, aiohttp_client):
 
 async def test_access_with_trusted_ip(app2, aiohttp_client):
     """Test access with an untrusted ip address."""
-    setup_auth(app2, TRUSTED_NETWORKS, False, api_password='some-pass')
+    setup_auth(app2, TRUSTED_NETWORKS, api_password='some-pass')
 
     set_mock_ip = mock_real_ip(app2)
     client = await aiohttp_client(app2)
@@ -169,7 +160,7 @@ async def test_auth_active_access_with_access_token_in_header(
         hass, app, aiohttp_client, hass_access_token):
     """Test access with access token in header."""
     token = hass_access_token
-    setup_auth(app, [], True, api_password=None)
+    setup_auth(app, [], api_password=None)
     client = await aiohttp_client(app)
 
     req = await client.get(
@@ -202,7 +193,7 @@ async def test_auth_active_access_with_access_token_in_header(
 
 async def test_auth_active_access_with_trusted_ip(app2, aiohttp_client):
     """Test access with an untrusted ip address."""
-    setup_auth(app2, TRUSTED_NETWORKS, True, api_password=None)
+    setup_auth(app2, TRUSTED_NETWORKS, None)
 
     set_mock_ip = mock_real_ip(app2)
     client = await aiohttp_client(app2)
@@ -220,31 +211,10 @@ async def test_auth_active_access_with_trusted_ip(app2, aiohttp_client):
             "{} should be trusted".format(remote_addr)
 
 
-async def test_auth_active_blocked_api_password_access(
-        app, aiohttp_client, legacy_auth):
-    """Test access using api_password should be blocked when auth.active."""
-    setup_auth(app, [], True, api_password=API_PASSWORD)
-    client = await aiohttp_client(app)
-
-    req = await client.get(
-        '/', headers={HTTP_HEADER_HA_AUTH: API_PASSWORD})
-    assert req.status == 401
-
-    resp = await client.get('/', params={
-        'api_password': API_PASSWORD
-    })
-    assert resp.status == 401
-
-    req = await client.get(
-        '/',
-        auth=BasicAuth('homeassistant', API_PASSWORD))
-    assert req.status == 401
-
-
 async def test_auth_legacy_support_api_password_access(
         app, aiohttp_client, legacy_auth):
     """Test access using api_password if auth.support_legacy."""
-    setup_auth(app, [], True, support_legacy=True, api_password=API_PASSWORD)
+    setup_auth(app, [], API_PASSWORD)
     client = await aiohttp_client(app)
 
     req = await client.get(
@@ -267,7 +237,7 @@ async def test_auth_access_signed_path(
     """Test access with signed url."""
     app.router.add_post('/', mock_handler)
     app.router.add_get('/another_path', mock_handler)
-    setup_auth(app, [], True, api_password=None)
+    setup_auth(app, [], None)
     client = await aiohttp_client(app)
 
     refresh_token = await hass.auth.async_validate_access_token(
